@@ -65,7 +65,7 @@ module BlifUtils
 			end
 
 			className = (model.name + '_simulation_class').gsub('_',' ').split.collect{|word| word.capitalize}.join
-			gateArray = model.simulation_components_to_schedule_stack(false, quiet) # This array does not contain constants
+			gateArray = model.simulation_components_to_schedule_stack(withOutputGraphviz: false, quiet: quiet) # This array does not contain constants
 			latchArray = model.components.select{|comp| comp.isLatch?}
 			nbGates = gateArray.length
 			nbLatches = latchArray.length

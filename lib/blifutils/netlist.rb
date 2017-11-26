@@ -474,10 +474,13 @@ module BlifUtils
 		end # BlifUtils::Netlist::Model
 
 
-		attr_reader :models
-
 		def initialize
 			@models = []
+		end
+
+
+		def models
+			return @models
 		end
 
 

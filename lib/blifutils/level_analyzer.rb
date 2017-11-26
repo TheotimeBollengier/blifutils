@@ -30,14 +30,14 @@ module BlifUtils
 			def level_analysis (withOutputGraphviz: false, quiet: false)
 				return unless is_self_contained?
 
-				print " Generating graph from model components...\r" unless quiet
+				puts "Generating graph from model components..." unless quiet
 				graphFull = BlifUtils::NetlistGraph::Graph.create_from_model(self)
-				print " Extracting connected subgraphs...        \r" unless quiet
+				print "Extracting connected subgraphs... " unless quiet
 				graphDAGs = graphFull.get_graph_without_input_output_reg_cst_modinst
 				dags = graphDAGs.get_connected_subgraphs
-				puts "#{dags.length} subgraph#{dags.length > 1 ? 's' : ''}#{unless quiet then ' '*34 end}"
+				puts "#{dags.length} subgraph#{dags.length > 1 ? 's' : ''} found"
 
-				print " Checking that there are no cycles in subgraphs...\r" unless quiet
+				print "Checking that there are no cycles in subgraphs...\n" unless quiet
 				# Check that all subgraphs are acyclic
 				dags.each_with_index do |dag, i|
 					unless dag.is_acyclic? then
@@ -48,11 +48,11 @@ module BlifUtils
 						abort str
 					end
 				end
-				puts "No combinatorial loops found#{unless quiet then ' '*23 end}"
+				puts "No combinatorial loops found"
 
 				# Do graph layering
 				unless quiet then
-					print " Layering subgraphs...\r" unless withOutputGraphviz
+					print "Layering subgraphs...\n" unless withOutputGraphviz
 				end
 				maxDagSize = 0
 				maxDagLevel = 0

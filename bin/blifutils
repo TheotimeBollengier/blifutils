@@ -106,7 +106,7 @@ ARGV.each{|f| inputFiles << f}
 ## Read blif inputs and add models to the netlist ##
 netlist = BlifUtils::Netlist.new
 inputFiles.each do |iFile|
-	elNetlist = BlifUtils::Elaborator.elaborate_netlist(BlifUtils::BlifParser.parse(iFile, quiet: options[:quiet]), quiet: options[:quiet])
+	elNetlist = BlifUtils::Elaborator.elaborate_netlist(BlifUtils::Parser.parse(iFile, quiet: options[:quiet]), quiet: options[:quiet])
 	elNetlist.models.each{|model| netlist.add_model(model)}
 end
 
@@ -124,7 +124,7 @@ if options[:flatten] then
 	blackboxes = netlist.models.select{|m| m.is_blackbox?}
 	netlist.clear
 	netlist.add_model(flattenedmodel)
-	netlist.models += blackboxes
+	blackboxes.each{|blbx| netlist.add_model(blbx)}
 end
 
 
@@ -136,7 +136,7 @@ if options[:blif] and netlist.length > 0 then
 		if not(File.exist?(netlist.first_model.name + '.blif')) then
 			netlistFileName = netlist.first_model.name + '.blif'
 		elsif inputFiles.length == 1 then
-			netlistFileName = File.basename(inputFiles[0], '.*') + '_.blif'
+			netlistFileName = File.basename(inputFiles[0], '.*') + '.blif'
 		else
 			netlistFileName = 'output.blif'
 		end
@@ -146,7 +146,7 @@ if options[:blif] and netlist.length > 0 then
 	blifStr = netlist.models.collect{|model| model.to_blif}.join("\n")
 	
 	File.write(netlistFileName, blifStr)
-	puts "Blif models written to file \"#{netlistFileName.light_cyan.bold}\"." unless options[:quiet]
+	puts "Blif models written to file \"#{netlistFileName}\"." unless options[:quiet]
 end
 
 
@@ -155,22 +155,21 @@ if options[:analyze] then
 	unless options[:model].nil? then
 		model = netlist.get_model_by_name(options[:model])
 		if model.nil? 
-			STDERR.puts "Cannot find a model named \"#{options[:model]}\"".light_red
+			STDERR.puts "Cannot find a model named \"#{options[:model]}\""
 			STDERR.puts "Available models are:"
 			netlist.model_names.each{|modelname| STDERR.puts "  #{modelname}"}
 			abort
 		end
 		puts model.analyse
 		if model.is_self_contained? and options[:analyseLevel] then
-			model.level_analysis(options[:analyzeLevelWithGV], options[:quiet])
+			model.level_analysis(withOutputGraphviz: options[:analyzeLevelWithGV], quiet: options[:quiet])
 		end
 	else
 		netlist.models.each do |model| 
 			puts model.analyse
 			if model.is_self_contained? and options[:analyseLevel] then
-				model.level_analysis(options[:analyzeLevelWithGV], options[:quiet])
+				model.level_analysis(withOutputGraphviz: options[:analyzeLevelWithGV], quiet: options[:quiet])
 			end
-			puts
 		end
 	end
 end

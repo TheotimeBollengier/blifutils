@@ -25,4 +25,5 @@ Gem::Specification.new do |s|
 	                 'lib/blifutils/parser.rb',
 	                 'lib/blifutils/simulator_generator.rb'
 	                ]
+	s.add_runtime_dependency 'rltk'
 end

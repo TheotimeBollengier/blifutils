@@ -197,7 +197,7 @@ module BlifUtils
 			processedFileNames << fileName
 
 			# Parse the file
-			ast = self.parse_file(fileName)
+			ast = self.parse_file(fileName, quiet)
 
 			# Gather new file to parse
 			newFileToParseList = []

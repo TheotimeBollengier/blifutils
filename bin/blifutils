@@ -1,0 +1,187 @@
+#!/usr/bin/env ruby
+
+##
+# Copyright (C) 2017 Théotime bollengier <theotime.bollengier@gmail.com>
+#
+# This file is part of Blifutils.
+#
+# Blifutils is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Blifutils is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Blifutils. If not, see <http://www.gnu.org/licenses/>.
+#
+
+#require 'blifutils'
+require_relative '../lib/blifutils'
+require 'optparse'
+
+
+
+options = {}
+inputFiles = []
+
+optparse = OptionParser.new do |opts|
+	# Set a banner, displayed at the top
+	# of the help screen.
+	opts.banner = "Usage: #{$0} [options] -i file1 file2 ..."
+
+	opts.on('-i', '--input FILES', 'Input blif files') do |file|
+		inputFiles << file
+	end
+
+	options[:blif] = false
+	options[:outputBlifName] = nil
+	opts.on('-o', '--output [FILE]', 'Output blif to FILE') do |file|
+		options[:blif] = true
+		options[:outputBlifName] = file
+	end
+
+	options[:simulation] = false
+	opts.on('-s', '--simulation', "Create C++ simulation files") do
+		options[:simulation] = true
+	end
+
+	options[:vhdl] = false
+	opts.on('-v', '--vhdl', "Create a vhdl file") do
+		options[:vhdl] = true
+	end
+
+	options[:flatten] = false
+	opts.on('-f', '--flatten', 'Flatten the model hierarchy in a single model') do
+		options[:flatten] = true
+	end
+
+	options[:model] = nil
+	opts.on('-m', '--model NAME', 'Name of the model to process') do |mod|
+		options[:model] = mod
+	end
+
+	options[:printModels] = false
+	opts.on('-p', '--print-models', 'Print model names') do
+		options[:printModels] = true
+	end
+
+	options[:analyze] = false
+	options[:analyseLevel] = false
+	opts.on('-a', '--analyze [level]', [:level], 'Print analysis, with optional level analysis (level)') do |ana|
+		options[:analyze] = true
+		options[:analyseLevel] = true if ana == :level 
+	end
+
+	options[:analyzeLevelWithGV] = false
+	opts.on('-A', '--analyze_with_graphviz', 'Print analysiz, with level analysis, wirting graphvis files') do
+		options[:analyze] = true
+		options[:analyseLevel] = true
+		options[:analyzeLevelWithGV] = true
+	end
+
+
+	options[:quiet] = false
+	opts.on('-q', '--quiet', "Don't print messages") do
+		options[:quiet] = true
+	end
+
+	# This displays the help screen, all programs are
+	# assumed to have this option.
+	opts.on( '-h', '--help', 'Display this help' ) do
+		puts opts
+		exit
+	end
+end
+
+optparse.parse!
+
+ARGV.each{|f| inputFiles << f}
+
+
+
+## Read blif inputs and add models to the netlist ##
+netlist = BlifUtils::Netlist.new
+inputFiles.each do |iFile|
+	elNetlist = BlifUtils::Elaborator.elaborate_netlist(BlifUtils::BlifParser.parse(iFile, quiet: options[:quiet]), quiet: options[:quiet])
+	elNetlist.models.each{|model| netlist.add_model(model)}
+end
+
+
+## Print model names ##
+if options[:printModels] then
+	puts "List of models:"
+	netlist.model_names.each{|modName| puts "  #{modName}"}
+end
+
+
+## Flatening model ##
+if options[:flatten] then
+	flattenedmodel = netlist.flatten(options[:model], true, quiet: options[:quiet])
+	blackboxes = netlist.models.select{|m| m.is_blackbox?}
+	netlist.clear
+	netlist.add_model(flattenedmodel)
+	netlist.models += blackboxes
+end
+
+
+## Output blif ##
+if options[:blif] and netlist.length > 0 then
+	unless options[:outputBlifName].nil? then
+		netlistFileName = options[:outputBlifName]
+	else
+		if not(File.exist?(netlist.first_model.name + '.blif')) then
+			netlistFileName = netlist.first_model.name + '.blif'
+		elsif inputFiles.length == 1 then
+			netlistFileName = File.basename(inputFiles[0], '.*') + '_.blif'
+		else
+			netlistFileName = 'output.blif'
+		end
+	end
+
+	netlist.update_clocks()
+	blifStr = netlist.models.collect{|model| model.to_blif}.join("\n")
+	
+	File.write(netlistFileName, blifStr)
+	puts "Blif models written to file \"#{netlistFileName.light_cyan.bold}\"." unless options[:quiet]
+end
+
+
+## Print analysis ##
+if options[:analyze] then
+	unless options[:model].nil? then
+		model = netlist.get_model_by_name(options[:model])
+		if model.nil? 
+			STDERR.puts "Cannot find a model named \"#{options[:model]}\"".light_red
+			STDERR.puts "Available models are:"
+			netlist.model_names.each{|modelname| STDERR.puts "  #{modelname}"}
+			abort
+		end
+		puts model.analyse
+		if model.is_self_contained? and options[:analyseLevel] then
+			model.level_analysis(options[:analyzeLevelWithGV], options[:quiet])
+		end
+	else
+		netlist.models.each do |model| 
+			puts model.analyse
+			if model.is_self_contained? and options[:analyseLevel] then
+				model.level_analysis(options[:analyzeLevelWithGV], options[:quiet])
+			end
+			puts
+		end
+	end
+end
+
+
+if options[:simulation] then
+	netlist.create_simulation_file_for_model(options[:model], quiet: options[:quiet])
+end
+
+
+if options[:vhdl] then
+	netlist.create_vhdl_files(options[:model])
+end
+

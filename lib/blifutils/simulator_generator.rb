@@ -138,6 +138,8 @@ module BlifUtils
 			str += "\t\t~#{className}();\n\n"
 			simInputs.each do |key, val|
 				val.each do |net_index|
+					ind = model.nets.index(net_index[0])
+					next if ind.nil?
 					str += "\t\tNet *INPUT_NET_#{key}#{if val.length > 1 then "_#{net_index[1]}" end};\n"
 				end
 			end
@@ -150,6 +152,7 @@ module BlifUtils
 			unless simVectorInputs.empty? then
 				str += "\n"
 				simVectorInputs.each do |simVectInput|
+					next if simVectInput[1].collect{|net| model.nets.index(net)}.include?(nil)
 					str += "\t\tBitVector *INPUT_VECTOR_#{simVectInput[0]};\n"
 				end
 			end
@@ -190,7 +193,9 @@ module BlifUtils
 			str += "\n"
 			simInputs.each do |key, val|
 				val.each do |net_index|
-					str += "\tINPUT_NET_#{key}#{if val.length > 1 then "_#{net_index[1]}" end} = nets[#{model.nets.index(net_index[0])}];\n"
+					ind = model.nets.index(net_index[0])
+					next if ind.nil?
+					str += "\tINPUT_NET_#{key}#{if val.length > 1 then "_#{net_index[1]}" end} = nets[#{ind}];\n"
 				end
 			end
 			str += "\n"
@@ -202,6 +207,7 @@ module BlifUtils
 			unless simVectorInputs.empty? then
 				str += "\n"
 				simVectorInputs.each do |simVectInput|
+					next if simVectInput[1].collect{|net| model.nets.index(net)}.include?(nil)
 					str += "\tINPUT_VECTOR_#{simVectInput[0]} = new BitVector(new Net*[#{simVectInput[1].length}]{#{simVectInput[1].collect{|net| "nets[#{model.nets.index(net)}]"}.join(', ')}}, #{simVectInput[1].length});\n"
 				end
 			end
@@ -239,6 +245,7 @@ module BlifUtils
 			unless simVectorInputs.empty? then
 				str += "\n"
 				simVectorInputs.each do |simVectInput|
+					next if simVectInput[1].collect{|net| model.nets.index(net)}.include?(nil)
 					str += "\tdelete INPUT_VECTOR_#{simVectInput[0]};\n"
 				end
 			end
@@ -292,6 +299,8 @@ module BlifUtils
 			hstr += "\t\t~#{className}();\n\n"
 			simInputs.each do |key, val|
 				val.each do |net_index|
+					ind = model.nets.index(net_index[0])
+					next if ind.nil?
 					hstr += "\t\tNet *INPUT_NET_#{key}#{if val.length > 1 then "_#{net_index[1]}" end};\n"
 				end
 			end
@@ -304,6 +313,7 @@ module BlifUtils
 			unless simVectorInputs.empty? then
 				hstr += "\n"
 				simVectorInputs.each do |simVectInput|
+					next if simVectInput[1].collect{|net| model.nets.index(net)}.include?(nil)
 					hstr += "\t\tBitVector *INPUT_VECTOR_#{simVectInput[0]};\n"
 				end
 			end

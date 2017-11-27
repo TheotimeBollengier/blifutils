@@ -232,6 +232,13 @@ module BlifUtils
 
 	end # BlifUtils::Elaborator
 
+
+	def self.read(fileName, quiet: false)
+		ast = BlifUtils::Parser.parse(fileName, quiet: quiet)
+		netlist = BlifUtils::Elaborator.elaborate_netlist(ast, quiet: quiet)
+		return netlist
+	end # BlifUtils::read
+
 end # BlifUtils
 
 

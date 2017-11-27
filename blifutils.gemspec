@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
 	s.authors     = 'Théotime Bollengier'
 	s.email       = 'theotime.bollengier@gmail.com'
 	s.homepage    = 'http://github.com/TheotimeBollengier/blifutils'
-	s.license     = 'GPLv3'
+	s.license     = 'GPL-3.0'
 	s.executables = ['blifutils']
 	s.files       = ['README.md',
 	                 'LICENSE',
@@ -23,7 +23,19 @@ Gem::Specification.new do |s|
 	                 'lib/blifutils/lexer.rb',
 	                 'lib/blifutils/netlist.rb',
 	                 'lib/blifutils/parser.rb',
-	                 'lib/blifutils/simulator_generator.rb'
+	                 'lib/blifutils/simulator_generator.rb',
+					 'test/sqrt8.blif',
+					 'test/sqrt8_PC.blif',
+					 'test/sqrt8_PC_counter.blif',
+					 'test/sqrt8_PC_done.blif',
+					 'test/sqrt8_PC_state.blif',
+					 'test/sqrt8.piccolo',
+					 'test/sqrt8_PO.blif',
+					 'test/sqrt8_PO_output.blif',
+					 'test/sqrt8_PO_sqrtr.blif',
+					 'test/sqrt8_PO_work.blif',
+					 'test/testbench_sqrt8.cc',
+					 'test/test_blifutils.rb'
 	                ]
-	s.add_runtime_dependency 'rltk'
+	s.add_runtime_dependency 'rltk', '~> 3.0', '>= 3.0.1'
 end

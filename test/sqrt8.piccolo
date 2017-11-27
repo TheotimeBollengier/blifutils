@@ -1,0 +1,132 @@
+/* This module computes 8-bit square root
+ * It is completely expanded so that each part can be seen in yEd
+ */
+
+
+module sqrt8(input<8> radicand, input go, output<4> squareRoot, output done) :
+	wire<2> state
+{
+	instance sqrt8_PC(go, done, state);
+	instance sqrt8_PO(radicand, state, squareRoot);
+}
+
+
+module sqrt8_PO(input<8> radicand, input<2> state, output<4> squareRoot) :
+	wire<4> sqrtr,
+	wire    fbit
+{
+	instance sqrt8_PO_work(state, radicand, sqrtr, fbit);
+	instance sqrt8_PO_sqrtr(state, fbit, sqrtr);
+	instance sqrt8_PO_output(state, sqrtr, squareRoot);
+}
+
+
+module sqrt8_PO_work(input<2> state, input<8> radicand, input<4> sqrtr, output fbit) :
+	reg<16> work,
+	wire<8> diff
+{
+	diff = work[15:8] - (2b00 : sqrtr : 2b01);
+	fbit = diff[7];
+
+	switch (state) {
+		case 'd1:
+			work = work[13:0] : 2b00;
+		case 'd2:
+			if (!fbit) {
+				work[15:8] = diff;
+			}
+		default:
+			work = 8b0 : radicand;
+	}
+}
+
+
+module sqrt8_PO_sqrtr(input<2> state, input fbit, output<4> sqrtr) :
+	reg<4>  sqrtrInt
+{
+	switch (state) {
+		case 'd0:
+			sqrtrInt = 'b0;
+		case 'd2:
+			sqrtrInt = sqrtrInt[2:0] : (~fbit);
+	}
+
+	sqrtr = sqrtrInt;
+}
+	
+
+module sqrt8_PO_output(input<2> state, input<4> sqrtr, output<4> squareRoot) :
+	reg<4>  squareRootInt
+{
+	switch (state) {
+		case 'd3:
+			squareRootInt = sqrtr;
+	}
+
+	squareRoot = squareRootInt;
+}
+
+
+module sqrt8_PC(input go, output done, output<2> state) : 
+	wire<2> counter
+{
+	instance sqrt8_PC_state(go, counter, state);
+	instance sqrt8_PC_counter(state, counter);
+	instance sqrt8_PC_done(state, done);
+}
+
+
+module sqrt8_PC_done(input<2> state, output done) : 
+	reg doneInt
+{
+	switch (state) {
+		case 'd3:
+			doneInt = 'b1;
+		default:
+			doneInt = 'b0;
+	}
+
+	done = doneInt;
+}
+		 
+
+module sqrt8_PC_counter(input<2> state, output<2> counter) : 
+	reg<2> counterInt
+{
+	switch (state) {
+		case 'd0:
+			counterInt = 'd0;
+		case 'd2:
+			counterInt = counterInt + 'd1;
+	}
+
+	counter = counterInt;
+}
+
+
+module sqrt8_PC_state(input go, input<2> counter, output<2> state) : 
+	reg<2> stateInt := 'd0
+{
+	switch (stateInt) {
+		case 'd0:
+			if (go) {
+				stateInt = 'd1;
+			}
+
+		case 'd1:
+			stateInt = 'd2;
+
+		case 'd2:
+			if (counter == 'd3) {
+				stateInt = 'd3;
+			} else {
+				stateInt = 'd1;
+			}
+
+		case 'd3:
+			stateInt = 'd0;
+	}
+
+	state = stateInt;
+}
+

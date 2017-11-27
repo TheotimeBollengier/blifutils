@@ -27,6 +27,59 @@ module BlifUtils
 
 		class Model
 
+			##
+			# Returns the logic level of the circuit, nil if the model includes subcircuits, or false if the model contains combinatorial loops
+			def level
+				return nil unless self.is_self_contained?
+
+				graph = BlifUtils::NetlistGraph::Graph::create_from_model(self)
+
+				start_vertices = graph.vertices.select{|v| v.component.kind_of?(BlifUtils::Netlist::Latch) or v.component.output.isOutput}.uniq
+
+				res = catch(:combinatorial_loop_found) do 
+					theMax = 0
+					visited_vertices = []
+					start_vertices.each do |start|
+						follow_combinatorial_path(graph, start, visited_vertices)
+						theMax = start.layer if start.layer > theMax
+					end
+					theMax
+				end
+
+				return false unless res
+				return res
+			end
+
+
+			private
+
+
+			def follow_combinatorial_path (graph, vertice, visited_vertices)
+				return unless vertice.layer.nil?
+				throw :combinatorial_loop_found if visited_vertices.include?(vertice)
+				visited_vertices << vertice
+
+				if vertice.component.kind_of?(BlifUtils::Netlist::Latch) then
+					my_layer = 0
+				else
+					my_layer = 1
+				end
+
+				the_max = 0
+
+				vertice.predecessors.each do |svert|
+					next if (svert == :input or svert == :output or svert.component.kind_of?(BlifUtils::Netlist::Latch))
+					follow_combinatorial_path(graph, svert, visited_vertices) if svert.layer.nil?
+					the_max = [the_max, svert.layer].max
+				end
+
+				vertice.layer = my_layer + the_max
+			end
+
+
+			public
+
+
 			def level_analysis (withOutputGraphviz: false, quiet: false)
 				return unless is_self_contained?
 

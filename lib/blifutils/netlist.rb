@@ -29,23 +29,24 @@ module BlifUtils
 				@name = name
 				@net = net
 			end
+
+			def to_s
+				return "#{if @net.isInput then 'Input' elsif @net.isOutput then 'Output' else 'IO' end} #{@net.name} / #{@name}"
+			end
 		end # BlifUtils::Netlist::IO
 
 
 		class Component
 			def isGate?
-				return true if self.class == BlifUtils::Netlist::LogicGate
-				return false
+				return self.kind_of?(BlifUtils::Netlist::LogicGate)
 			end
 
 			def isLatch?
-				return true if self.class == BlifUtils::Netlist::Latch
-				return false
+				return self.kind_of?(BlifUtils::Netlist::Latch)
 			end
 
 			def isSubcircuit?
-				return true if self.class == BlifUtils::Netlist::SubCircuit
-				return false
+				return self.kind_of?(BlifUtils::Netlist::SubCircuit)
 			end
 		end # BlifUtils::Netlist::Component
 
@@ -149,7 +150,7 @@ module BlifUtils
 			attr_reader   :ctrlType  # :fe, :re, :ah, :al, :as
 			attr_reader   :ctrlSig   # Net
 
-			def initialize (input, output, initValue, ctrlType = :re, ctrlSig = 'NIL')
+			def initialize (input, output, initValue, ctrlType = :re, ctrlSig = nil)
 				@input = input
 				@output = output
 				@initValue = initValue
@@ -159,13 +160,17 @@ module BlifUtils
 
 
 			def to_blif
-				#return ".latch #{@input.name} #{@output.name}#{if @initValue != 3 then " #{@initValue}" end}\n"
-				return ".latch #{@input.name} #{@output.name} #{@ctrlType} #{@ctrlSig} #{@initValue}\n"
+				return ".latch #{@input.name} #{@output.name} #{@ctrlType} #{@ctrlSig.nil? ? 'NIL' : @ctrlSig} #{@initValue}\n"
 			end
 
 
 			def inputs
 				return [@input]
+			end
+
+
+			def name
+				return @output.name
 			end
 
 
@@ -328,6 +333,43 @@ module BlifUtils
 				end
 
 				return str
+			end
+
+
+			def analyze_to_hash
+
+				res = {}
+				res[:name] = String.new(@name)
+				res[:nb_inputs]  = @inputs.length
+				res[:nb_outputs] = @outputs.length
+				res[:is_blackbox] = @isBlackBox
+				return res if @isBlackBox
+				res[:nb_nets]    = @nets.length
+				res[:nb_edges]   = @nets.collect{|net| net.fanouts.length}.inject(:+)
+				res[:nb_nodes]   = @components.length
+				res[:nb_latches] = @components.count{|comp| comp.isLatch?}
+				gates = @components.select{|comp| comp.isGate?}
+				res[:nb_gates]    = gates.length
+				res[:nb_subckt]  = @components.count{|comp| comp.isSubcircuit?}
+
+				if res[:nb_gates] > 0 then
+					repartition = {}
+					gates.collect{|g| g.inputs.length}.uniq.sort.each{|n| repartition[n] = 0}
+					gates.each{|gate| repartition[gate.inputs.length] += 1}
+					gh = {}
+					gh[:gates_per_nb_inputs] = repartition
+					gh[:nb_buffers] = gates.count{|gate| gate.is_buffer?}
+					gh[:nb_constants] = gates.count{|gate| gate.is_constant?}
+					res[:gates] = gh
+				end
+
+				if res[:nb_subckt] > 0 then
+					repartition = Hash.new(0)
+					subcircuits.each{|subckt| repartition[subckt.modelName] += 1}
+					res[:subckts] = repartition
+				end
+
+				return res
 			end
 
 
@@ -504,6 +546,7 @@ module BlifUtils
 				abort "ERROR: Model \"#{model.name}\" is already defined in the model collection"
 			end
 			@models << model
+			self
 		end
 
 
@@ -512,6 +555,7 @@ module BlifUtils
 				abort "ERROR: Model \"#{model.name}\" is already defined in the model collection".ligth_red
 			end
 			@models.unshift(model)
+			self
 		end
 
 
@@ -530,6 +574,7 @@ module BlifUtils
 			elsif model.class == BlifUtils::Netlist::Model then
 				@models.delete(model)
 			end
+			self
 		end
 
 
@@ -553,6 +598,7 @@ module BlifUtils
 					remove_model(modName)
 				end
 			end
+			self
 		end
 
 
@@ -583,6 +629,7 @@ module BlifUtils
 
 		def clear
 			@models = []
+			self
 		end
 
 
@@ -590,6 +637,7 @@ module BlifUtils
 			@models.each do |model|
 				update_clocks_for_model_recursive(model)
 			end
+			self
 		end
 
 

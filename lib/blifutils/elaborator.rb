@@ -252,6 +252,6 @@ if __FILE__ == $0
 	ast = BlifUtils::Parser.parse(ARGV[0])
 
 	netlist = BlifUtils::Elaborator.elaborate_netlist(ast)
-	puts netlist.analyse
+	puts netlist.analyze
 end
 

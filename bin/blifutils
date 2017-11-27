@@ -70,16 +70,16 @@ optparse = OptionParser.new do |opts|
 	end
 
 	options[:analyze] = false
-	options[:analyseLevel] = false
+	options[:analyzeLevel] = false
 	opts.on('-a', '--analyze [level]', [:level], 'Print analysis, with optional level analysis (level)') do |ana|
 		options[:analyze] = true
-		options[:analyseLevel] = true if ana == :level 
+		options[:analyzeLevel] = true if ana == :level 
 	end
 
 	options[:analyzeLevelWithGV] = false
 	opts.on('-A', '--analyze_with_graphviz', 'Print analysiz, with level analysis, wirting graphvis files') do
 		options[:analyze] = true
-		options[:analyseLevel] = true
+		options[:analyzeLevel] = true
 		options[:analyzeLevelWithGV] = true
 	end
 
@@ -160,14 +160,14 @@ if options[:analyze] then
 			netlist.model_names.each{|modelname| STDERR.puts "  #{modelname}"}
 			abort
 		end
-		puts model.analyse
-		if model.is_self_contained? and options[:analyseLevel] then
+		puts model.analyze
+		if model.is_self_contained? and options[:analyzeLevel] then
 			model.level_analysis(withOutputGraphviz: options[:analyzeLevelWithGV], quiet: options[:quiet])
 		end
 	else
 		netlist.models.each do |model| 
-			puts model.analyse
-			if model.is_self_contained? and options[:analyseLevel] then
+			puts model.analyze
+			if model.is_self_contained? and options[:analyzeLevel] then
 				model.level_analysis(withOutputGraphviz: options[:analyzeLevelWithGV], quiet: options[:quiet])
 			end
 		end

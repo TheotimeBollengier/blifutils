@@ -35,7 +35,12 @@ Gem::Specification.new do |s|
 					 'test/sqrt8_PO_sqrtr.blif',
 					 'test/sqrt8_PO_work.blif',
 					 'test/testbench_sqrt8.cc',
-					 'test/test_blifutils.rb'
+					 'test/test_blifutils.rb',
+					 'examples/zpu/simulate_zpu.rb',
+					 'examples/zpu/testbench_zpu.cc',
+					 'examples/zpu/zpu_helloworld.bin',
+					 'examples/zpu/zpu_mem16.blif',
+					 'examples/zpu/zpu_mem16.piccolo'
 	                ]
 	s.add_runtime_dependency 'rltk', '~> 3.0', '>= 3.0.1'
 end

@@ -288,7 +288,7 @@ module BlifUtils
 			end
 
 
-			def analyse
+			def analyze
 				bannerTitle = " #{@isBlackBox ? 'Black box' : 'Model'} \"#{@name}\" analysis "
 				bannerSize = [40, bannerTitle.length].max
 				str  = '+' + ''.ljust(bannerSize,'-') + "+\n"
@@ -583,9 +583,9 @@ module BlifUtils
 		end
 
 
-		def analyse
+		def analyze
 			str = "Model collection contains #{length} models\n"
-			@models.each{|model| str += model.analyse}
+			@models.each{|model| str += model.analyze}
 			return str
 		end
 

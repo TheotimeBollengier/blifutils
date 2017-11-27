@@ -1,0 +1,351 @@
+/* Copyright (C) 2017 Théotime bollengier <theotime.bollengier@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
+/* This file is an implementation of the ZPU processor (https://github.com/zylin/zpu)
+ * in the Piccolo minimalist hardware description language (https://github.com/TheotimeBollengier/piccolo).
+ */
+
+
+module zpu_mem16(output     CYC_O, // Wishbone interface
+                 output     STB_O,
+		         output     WE_O,
+		         output<14> ADR_O,
+		         output<32> DAT_O,
+		         input<32>  DAT_I,
+		         input      ACK_I,
+		         output     BREAKPOINT) :
+	/* ZPU registers */
+	reg<8>   IR,
+	reg<16>  PC := 'd0,
+	reg<14>  SP := 'x2000, // stack pointer is initialized at 32k
+	reg      IDIM := 'b0,
+	reg<32>  REGA,
+	reg<32>  REGB,
+	/* Instruction flags */
+	wire     IM_I,
+	wire     STORESP_I,
+	wire     LOADSP_I,
+	wire     ADDSP_I,
+	wire     EMULATE_I,
+	wire     POPPC_I,
+	wire     LOAD_I,
+	wire     STORE_I,
+	wire     PUSHSP_I,
+	wire     POPSP_I,
+	wire     ADD_I,
+	wire     AND_I,
+	wire     OR_I,
+	wire     NOT_I,
+	wire     FLIP_I,
+	wire     NOP_I,
+	/* State */
+	reg<4>   state_ZPU := 'd0,
+	/* Others */
+	wire<14> SP_dec,
+	wire<14> SP_inc,
+	wire<16> PC_inc,
+	reg      CYC_O_ := 'b0,
+	reg      WE_O_ := 'b0,
+	reg<14>  ADR_O_,
+	reg<32>  DAT_O_,
+	reg      BREAKPOINT_ := 'b0,
+	wire     go_pop_a_start,
+	wire     get_dati,
+{
+	/* Decode instruction */
+	IM_I      = IR[7];
+	STORESP_I = (IR[7:5] == 'b010);
+    LOADSP_I  = (IR[7:5] == 'b011);
+	ADDSP_I   = (IR[7:4] == 'b0001);
+	EMULATE_I = (IR[7:5] == 'b001);
+	POPPC_I   = (IR      == 'b00000100);
+	LOAD_I    = (IR      == 'b00001000);
+	STORE_I   = (IR      == 'b00001100);
+	PUSHSP_I  = (IR      == 'b00000010); 
+	POPSP_I   = (IR      == 'b00001101);
+	ADD_I     = (IR      == 'b00000101);
+	AND_I     = (IR      == 'b00000110);
+	OR_I      = (IR      == 'b00000111);
+	NOT_I     = (IR      == 'b00001001);
+	FLIP_I    = (IR      == 'b00001010); 
+	NOP_I     = (IR      == 'b00001011); 
+
+
+	/* Get some usefull values */
+	SP_dec = SP - 'd1;
+	SP_inc = SP + 'd1;
+	PC_inc = PC + 'd1;
+
+	go_pop_a_start = STORESP_I | ADDSP_I | POPPC_I | LOAD_I | STORE_I | POPSP_I | ADD_I | AND_I | OR_I| NOT_I | FLIP_I;
+	get_dati = STORE_I | ADD_I | AND_I | OR_I;
+
+	/* ZPU FSM */
+	switch (state_ZPU) {
+		case 'd0: // FETCH_start_s
+			CYC_O_ = 'b1;
+			WE_O_ = 'b0;
+			ADR_O_ = PC[15:2];
+			state_ZPU = 'd1; // FETCH_end_s
+
+		case 'd1: // FETCH_end_s
+			if (ACK_I) {
+				CYC_O_ = 'b0;
+				PC = PC_inc;
+				switch (PC[1:0]) {
+					case 'b00:
+						IR = DAT_I[31:24];
+					case 'b01:
+						IR = DAT_I[23:16];
+					case 'b10:
+						IR = DAT_I[15:8];
+					case 'b11:
+						IR = DAT_I[7:0];
+				}
+				state_ZPU = 'd2; // DECODE_s
+			}
+
+		/* Decode */
+		case 'd2: // DECODE_s
+			if (go_pop_a_start) {
+				state_ZPU = 'd3; // POP_A_start_s
+			}
+			elsif (IM_I) {
+				if (!IDIM) {
+					if (IR[6]) {
+						REGA = 'b11111111111111111111111111 : IR[5:0];
+					} else {
+						REGA = 26b0 : IR[5:0];
+					}
+					state_ZPU = 'd14; // PUSH_start_s
+				} else {
+					REGA[6:0] = IR[6:0];
+					state_ZPU = 'd3; // POP_A_start_s
+				}
+			}
+			elsif (LOADSP_I) {
+				state_ZPU = 'd7; // LOAD_STACK_start_s
+			}
+			elsif (PUSHSP_I) {
+				REGA = 16b0 : SP : 2b0;
+				state_ZPU = 'd14; // PUSH_start_s
+			}
+			elsif (EMULATE_I) { 
+				REGA = 16b0 : PC;
+				PC = 6b0 : IR[4:0] : 5b0;
+				state_ZPU = 'd14; // PUSH_start_s
+			}
+			elsif (NOP_I) {
+				state_ZPU = 'd0; // FETCH_start_s
+			} else {
+				state_ZPU = 'd15; // BREAKPOINT_s
+			}
+
+
+		/* Start POP first value */
+		case 'd3: // POP_A_start_s
+			CYC_O_ = 'b1;
+			WE_O_  = 'b0;
+			ADR_O_ = SP;
+			SP = SP_inc;
+			state_ZPU = 'd4; // POP_A_end_s
+
+
+		/* End POP first value */
+		case 'd4: // POP_A_end_s
+			if (ACK_I) {
+				CYC_O_ = 'b0;
+
+				if (get_dati) {
+					REGA = DAT_I;
+					state_ZPU = 'd5; // POP_B_start_s
+				}
+				elsif (IM_I) {
+					REGA[31:7] = DAT_I[24:0];
+					state_ZPU = 'd14; // PUSH_start_s
+				}
+				elsif (STORESP_I) {
+					REGA = DAT_I;
+					state_ZPU = 'd9; // STORE_STACK_start_s
+				}
+				elsif (ADDSP_I) {
+					REGA = DAT_I;
+					state_ZPU = 'd7; // LOAD_STACK_start_s
+				}
+				elsif (POPPC_I) {
+					PC = DAT_I[15:0];
+					state_ZPU = 'd0; // FETCH_start_s
+				}
+				elsif (LOAD_I) {
+					REGA = DAT_I;
+					state_ZPU = 'd11; // LOAD_MEM_start_s
+				}
+				elsif (POPSP_I) { 
+					SP = DAT_I[15:2];
+					state_ZPU = 'd0; // FETCH_start_s
+				}
+				elsif (NOT_I) {
+					REGA = ~(DAT_I);
+					state_ZPU = 'd14; // PUSH_start_s
+				}
+				elsif (FLIP_I) {
+					REGA = DAT_I[0] : DAT_I[1] : DAT_I[2] : DAT_I[3] : DAT_I[4] : DAT_I[5] : DAT_I[6] : DAT_I[7] : 
+						DAT_I[8] : DAT_I[9] : DAT_I[10] : DAT_I[11] : DAT_I[12] : DAT_I[13] : DAT_I[14] : DAT_I[15] : 
+						DAT_I[16] : DAT_I[17] : DAT_I[18] : DAT_I[19] : DAT_I[20] : DAT_I[21] : DAT_I[22] : DAT_I[23] : 
+						DAT_I[24] : DAT_I[25] : DAT_I[26] : DAT_I[27] : DAT_I[28] : DAT_I[29] :  DAT_I[30] : DAT_I[31]; 
+					state_ZPU = 'd14; // PUSH_start_s
+				}
+				else {
+					state_ZPU = 'd15; // BREAKPOINT_s
+				}
+			}
+
+
+		/* Start POP second value */
+		case 'd5: // POP_B_start_s
+			CYC_O_ = 'b1;
+			WE_O_  = 'b0;
+			ADR_O_ = SP;
+			SP = SP_inc;
+			state_ZPU = 'd6; // POP_B_end_s
+
+
+		/* End POP second value */
+		case 'd6: // POP_B_end_s
+			if (ACK_I) {
+				CYC_O_ = 'b0;
+				if (STORE_I) { 
+					REGB = DAT_I;
+					state_ZPU = 'd13; // STORE_MEM_start_s
+				}
+				elsif (ADD_I) { 
+					REGA = REGA + DAT_I;
+					state_ZPU = 'd14; // PUSH_start_s
+				}
+				elsif (AND_I) { 
+					REGA = REGA & DAT_I;
+					state_ZPU = 'd14; // PUSH_start_s
+				}
+				elsif (OR_I) { 
+					REGA = REGA | DAT_I;
+					state_ZPU = 'd14; // PUSH_start_s
+				}
+				else {
+					state_ZPU = 'd15; // BREAKPOINT_s
+				}
+			}
+
+
+		/* Start LOAD from STACK */
+		case 'd7: // LOAD_STACK_start_s
+			CYC_O_ = 'b1;
+			WE_O_  = 'b0;
+			if (LOADSP_I) {
+				ADR_O_ = SP + (9b0 : (~IR[4]) : IR[3:0]);
+			}
+			elsif (ADDSP_I) {
+				ADR_O_ = SP + (10b0 : IR[3:0]) - 'd1;
+			}
+			state_ZPU = 'd8; // LOAD_STACK_end_s
+
+
+		/* End LOAD from STACK */
+		case 'd8: // LOAD_STACK_end_s
+			if (ACK_I) {
+				CYC_O_ = 'b0;
+				if (LOADSP_I) {
+					REGA = DAT_I;
+				}
+				elsif (ADDSP_I) {
+					REGA = REGA + DAT_I;
+				}
+				state_ZPU = 'd14; // PUSH_start_s
+			}
+
+
+		/* Start STORE to STACK */
+		case 'd9: // STORE_STACK_start_s
+			CYC_O_ = 'b1;
+			WE_O_  = 'b1;
+			ADR_O_ = SP + (9b0 : (~IR[4]) : IR[3:0]) - 'd1;
+			DAT_O_ = REGA;
+			state_ZPU = 'd10; // store_end_s
+
+
+		/* End STORE */
+		case 'd10: // store_end_s
+			if (ACK_I) {
+				CYC_O_ = 'b0;
+				state_ZPU = 'd0; // FETCH_start_s
+			}
+
+
+		/* Start LOAD from MEM */
+		case 'd11: // LOAD_MEM_start_s
+			CYC_O_ = 'b1;
+			WE_O_  = 'b0;
+			ADR_O_ = REGA[15:2];
+			state_ZPU = 'd12; // LOAD_MEM_end_s
+
+
+		/* End LOAD from MEM */
+		case 'd12: // LOAD_MEM_end_s
+			if (ACK_I) {
+				CYC_O_ = 'b0;
+				REGA = DAT_I;
+				state_ZPU = 'd14; // PUSH_start_s
+			}
+
+
+		/* Start STORE to MEM */
+		case 'd13: // STORE_MEM_start_s
+			CYC_O_ = 'b1;
+			WE_O_  = 'b1;
+			ADR_O_ = REGA[15:2];
+			DAT_O_ = REGB;
+			state_ZPU = 'd10; // store_end_s
+
+
+		/* Start PUSH */
+		case 'd14: // PUSH_start_s
+			CYC_O_ = 'b1;
+			WE_O_  = 'b1;
+			ADR_O_ = SP_dec;
+			DAT_O_ = REGA;
+			SP = SP_dec;
+			state_ZPU = 'd10; // store_end_s
+
+
+		/* BREAKPOINT state */
+		case 'd15: // BREAKPOINT_s
+			CYC_O_ = 'b0;
+			BREAKPOINT_ = 'b1;
+	}
+
+
+	/* IDIM Flag */
+	if (state_ZPU == 'd2) { // DECODE_s
+		IDIM = IM_I;
+	}
+
+	CYC_O = CYC_O_;
+	STB_O = CYC_O_;
+	WE_O  = WE_O_;
+	ADR_O = ADR_O_;
+	DAT_O = DAT_O_;
+	BREAKPOINT = BREAKPOINT_;
+}
+

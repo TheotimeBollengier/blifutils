@@ -250,6 +250,10 @@ module BlifUtils
 				@isOutput = isOutput
 			end
 
+			## To prevent inspect recurtion ##
+			def inspect
+				return "#<BlifUtils::Netlist::Net:#{object_id} @name=#{@name.inspect}>"
+			end
 
 			def to_s
 				return @name
@@ -280,6 +284,13 @@ module BlifUtils
 				@nets = nets
 				@isBlackBox = isBlackBox
 				@clocks = clocks
+			end
+
+
+
+			## To prevent 36548 lines of output ##
+			def inspect
+				return "#<BlifUtils::Netlist::Model:#{object_id} @name=#{@name.inspect}>"
 			end
 
 

@@ -77,7 +77,7 @@ optparse = OptionParser.new do |opts|
 	end
 
 	options[:analyzeLevelWithGV] = false
-	opts.on('-A', '--analyze_with_graphviz', 'Print analysiz, with level analysis, wirting graphvis files') do
+	opts.on('-A', '--analyze_with_graphviz', 'Print analysis, with level analysis, wirting graphvis files') do
 		options[:analyze] = true
 		options[:analyzeLevel] = true
 		options[:analyzeLevelWithGV] = true

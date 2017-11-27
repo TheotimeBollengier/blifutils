@@ -1,0 +1,11 @@
+*.swp
+*.o
+*.gem
+examples/zpu/zpu_mem16_cpp_header.hh
+examples/zpu/zpu_mem16_cpp_sim.cc
+examples/zpu/zpu_mem16_cpp_sim.o
+examples/zpu/zpu_simulation
+test/sqrt8_cpp_header.hh
+test/sqrt8_cpp_sim
+test/sqrt8_cpp_sim.cc
+test/sqrt8_cpp_sim.o

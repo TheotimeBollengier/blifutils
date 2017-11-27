@@ -40,7 +40,10 @@ Gem::Specification.new do |s|
 					 'examples/zpu/testbench_zpu.cc',
 					 'examples/zpu/zpu_helloworld.bin',
 					 'examples/zpu/zpu_mem16.blif',
-					 'examples/zpu/zpu_mem16.piccolo'
+					 'examples/zpu/zpu_mem16.piccolo',
+					 'examples/zpu/compile_zpu_program/README.md',
+					 'examples/zpu/compile_zpu_program/main.c',
+					 'examples/zpu/compile_zpu_program/Makefile'
 	                ]
 	s.add_runtime_dependency 'rltk', '~> 3.0', '>= 3.0.1'
 end

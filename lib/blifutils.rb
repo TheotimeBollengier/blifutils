@@ -21,11 +21,11 @@ module BlifUtils
 	VERSION = '0.0.1'
 end
 
-require_relative 'blifutils/parser'
-require_relative 'blifutils/netlist'
-require_relative 'blifutils/elaborator'
-require_relative 'blifutils/layering'
-require_relative 'blifutils/level_analyzer'
-require_relative 'blifutils/simulator_generator'
-require_relative 'blifutils/blif_to_vhdl'
+require 'blifutils/parser'
+require 'blifutils/netlist'
+require 'blifutils/elaborator'
+require 'blifutils/layering'
+require 'blifutils/level_analyzer'
+require 'blifutils/simulator_generator'
+require 'blifutils/blif_to_vhdl'
 

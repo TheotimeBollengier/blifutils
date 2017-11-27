@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require_relative '../lib/blifutils.rb'
+require 'blifutils'
 
 golden_model_names = [
 	"sqrt8", 
@@ -67,7 +67,9 @@ testbench_exec = 'sqrt8_cpp_sim'
 
 cmd = "g++ -W -Wall -I#{testbench_dir} -o #{testbench_exec} #{testbench_src} #{testbench_obj}"
 puts "Executing: #{cmd}"
-abort unless system cmd
+res = system cmd
+abort "Cannot find g++" if res.nil?
+abort unless res
 
 puts "Executing: #{testbench_exec}"
 abort unless system "./#{testbench_exec}"

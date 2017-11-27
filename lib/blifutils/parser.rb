@@ -18,8 +18,8 @@
 
 
 require 'rltk/parser'
-require_relative 'lexer.rb'
-require_relative 'ast.rb'
+require 'blifutils/lexer'
+require 'blifutils/ast'
 
 
 module BlifUtils

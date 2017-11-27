@@ -19,10 +19,8 @@
 # along with Blifutils. If not, see <http://www.gnu.org/licenses/>.
 #
 
-#require 'blifutils'
-require_relative '../lib/blifutils'
+require 'blifutils'
 require 'optparse'
-
 
 
 options = {}

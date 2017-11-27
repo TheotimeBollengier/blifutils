@@ -17,7 +17,7 @@
 # along with Blifutils. If not, see <http://www.gnu.org/licenses/>.
 
 
-require_relative 'netlist.rb'
+require 'blifutils/netlist'
 
 
 module BlifUtils

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require_relative '../../lib/blifutils'
+require 'blifutils'
 
 netlist = BlifUtils::read('zpu_mem16.blif')
 

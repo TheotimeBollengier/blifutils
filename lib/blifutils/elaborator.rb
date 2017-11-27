@@ -17,9 +17,9 @@
 # along with Blifutils. If not, see <http://www.gnu.org/licenses/>.
 
 
-require_relative 'parser.rb'
-require_relative 'ast.rb'
-require_relative 'netlist.rb'
+require 'blifutils/parser.rb'
+require 'blifutils/ast.rb'
+require 'blifutils/netlist.rb'
 
 
 module BlifUtils

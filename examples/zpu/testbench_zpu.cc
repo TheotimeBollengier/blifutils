@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
 			}
 			if (dut->OUTPUT_NET_WE_O->getValue() == 1) {
 				if (addr >= (sizeof(mem) / 4)) {
+					//printf("\naddr: 0x%x ", addr);
 					uint64_t car = dut->OUTPUT_VECTOR_DAT_O->getValue(&valid);
 					if (valid != true) {
 						std::cerr << "\033[1;31mDAT_O not valid (" << cclock << ")\033[0m" << std::endl;
@@ -98,8 +99,10 @@ int main(int argc, char *argv[])
 						exit(EXIT_FAILURE);
 					}
 				}
+				//printf("Write 0x%08x @ 0x%08x\n", mem[addr], addr << 2);
 			} else {
 				dut->INPUT_VECTOR_DAT_I->setValue((uint64_t)mem[addr]);
+				//printf("Read  0x%08x @ 0x%08x\n", mem[addr], addr << 2);
 			}
 			dut->INPUT_NET_ACK_I->setValue(1);
 			dut->propagate();

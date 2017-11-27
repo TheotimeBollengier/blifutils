@@ -17,8 +17,8 @@
 # along with Blifutils. If not, see <http://www.gnu.org/licenses/>.
 
 
-require_relative 'netlist.rb'
-require_relative 'layering.rb'
+require 'blifutils/netlist.rb'
+require 'blifutils/layering.rb'
 
 
 module BlifUtils

@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
 	s.name        = 'blifutils'
-	s.version     = '0.0.1'
+	s.version     = '0.0.2'
 	s.date        = '2017-11-26'
 	s.summary     = 'BlifUtils is a library to handle BLIF netlists in Ruby.'
 	s.description = "BlifUtils is a library to handle BLIF logic netlists in Ruby. It can read and write files in the BLIF format, elaborate internal representations of the netlists, analyze it, flattent modules, write the modules as VHDL entities, and generate C++ code for fast simulation of the netlists."

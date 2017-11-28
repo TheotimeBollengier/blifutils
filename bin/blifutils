@@ -29,17 +29,32 @@ inputFiles = []
 optparse = OptionParser.new do |opts|
 	# Set a banner, displayed at the top
 	# of the help screen.
-	opts.banner = "Usage: #{$0} [options] -i file1 file2 ..."
+	opts.banner = "Usage: #{File.basename($0)} [options] -i file1 file2 ..."
 
-	opts.on('-i', '--input FILES', 'Input blif files') do |file|
+	opts.on('-i', '--input FILES', 'Input BLIF files') do |file|
 		inputFiles << file
 	end
 
 	options[:blif] = false
 	options[:outputBlifName] = nil
-	opts.on('-o', '--output [FILE]', 'Output blif to FILE') do |file|
+	opts.on('-o', '--output [FILE]', 'Output BLIF FILE') do |file|
 		options[:blif] = true
 		options[:outputBlifName] = file
+	end
+
+	options[:printModels] = false
+	opts.on('-p', '--print-models', 'Print model names') do
+		options[:printModels] = true
+	end
+
+	options[:model] = nil
+	opts.on('-m', '--model NAME', 'Name of the model to process') do |mod|
+		options[:model] = mod
+	end
+
+	options[:flatten] = false
+	opts.on('-f', '--flatten', 'Flatten the model hierarchy in a single model') do
+		options[:flatten] = true
 	end
 
 	options[:simulation] = false
@@ -50,21 +65,6 @@ optparse = OptionParser.new do |opts|
 	options[:vhdl] = false
 	opts.on('-v', '--vhdl', "Create a vhdl file") do
 		options[:vhdl] = true
-	end
-
-	options[:flatten] = false
-	opts.on('-f', '--flatten', 'Flatten the model hierarchy in a single model') do
-		options[:flatten] = true
-	end
-
-	options[:model] = nil
-	opts.on('-m', '--model NAME', 'Name of the model to process') do |mod|
-		options[:model] = mod
-	end
-
-	options[:printModels] = false
-	opts.on('-p', '--print-models', 'Print model names') do
-		options[:printModels] = true
 	end
 
 	options[:analyze] = false
@@ -81,6 +81,20 @@ optparse = OptionParser.new do |opts|
 		options[:analyzeLevelWithGV] = true
 	end
 
+	options[:default_latch_type] = nil
+	opts.on('--default-latch-type TYPE', 'Set undefined latch types to TYPE (re: rising edge, fe: falling edge, al: active low, ah: active high, as: asynchronous)') do |type|
+		options[:default_latch_type] = type.to_sym
+	end
+
+	options[:default_latch_clock] = nil
+	opts.on('--default-latch-clock NAME', 'Set undefined latch contol signals to NAME') do |name|
+		options[:default_latch_clock] = name
+	end
+
+	options[:default_latch_initial_value] = nil
+	opts.on('--default-latch-initial-value VALUE', "Set undefined latch initial value to VALUE (0, 1, 2: don't care, 3: undefine)") do |val|
+		options[:default_latch_initial_value] = val
+	end
 
 	options[:quiet] = false
 	opts.on('-q', '--quiet', "Don't print messages") do
@@ -90,21 +104,42 @@ optparse = OptionParser.new do |opts|
 	# This displays the help screen, all programs are
 	# assumed to have this option.
 	opts.on( '-h', '--help', 'Display this help' ) do
-		puts opts
+		puts opts.to_s
 		exit
 	end
 end
 
-optparse.parse!
+begin
+	optparse.parse!
+rescue OptionParser::MissingArgument => e
+	STDERR.puts e.message
+	abort optparse.to_s
+end
 
 ARGV.each{|f| inputFiles << f}
 
+unless [nil, :re, :fe, :al, :ah, :as].include?(options[:default_latch_type])
+	STDERR.puts "Default latch type must be either re, fe, al, ah or as."
+	abort optparse.to_s
+end
+
+unless options[:default_latch_initial_value].nil? 
+	unless options[:default_latch_initial_value].match(/^[0123]$/) then
+		STDERR.puts "Default latch initial value must be either 0, 1, 2 or 3."
+		abort optparse.to_s
+	end
+	options[:default_latch_initial_value] = options[:default_latch_initial_value].to_i
+end
 
 
 ## Read blif inputs and add models to the netlist ##
 netlist = BlifUtils::Netlist.new
 inputFiles.each do |iFile|
-	elNetlist = BlifUtils::Elaborator.elaborate_netlist(BlifUtils::Parser.parse(iFile, quiet: options[:quiet]), quiet: options[:quiet])
+	elNetlist = BlifUtils::Elaborator.elaborate_netlist(BlifUtils::Parser.parse(iFile, quiet: options[:quiet]), 
+														quiet: options[:quiet],
+														default_latch_type: options[:default_latch_type],  
+														default_latch_clock: options[:default_latch_clock], 
+														default_latch_initial_value: options[:default_latch_initial_value])
 	elNetlist.models.each{|model| netlist.add_model(model)}
 end
 

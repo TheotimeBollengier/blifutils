@@ -26,13 +26,13 @@ module BlifUtils
 
 	module Elaborator
 
-		def self.elaborate_netlist (ast, quiet: false)
+		def self.elaborate_netlist (ast, quiet: false, default_latch_type: nil, default_latch_clock: nil, default_latch_initial_value: nil)
 			modelDeclarations = gather_model_declarations(ast)
 
 			netlist = BlifUtils::Netlist.new
 			models = ast.modelList.collect do |modelAst|
 				puts "Elaborating model \"#{modelAst.name}\"..." unless quiet
-				netlist.add_model(elaborate_model(modelAst, modelDeclarations, quiet: quiet))
+				netlist.add_model(elaborate_model(modelAst, modelDeclarations, quiet: quiet, default_latch_type: default_latch_type, default_latch_clock: default_latch_clock, default_latch_initial_value: default_latch_initial_value))
 			end
 
 			return netlist
@@ -94,7 +94,7 @@ module BlifUtils
 		end # BlifUtils::Elaborator::gather_model_declarations
 
 
-		def self.elaborate_model (modelAst, modelDeclarations, quiet: false)
+		def self.elaborate_model (modelAst, modelDeclarations, quiet: false, default_latch_type: nil, default_latch_clock: nil, default_latch_initial_value: nil)
 			name = modelAst.name
 			inputs = []
 			outputs = []
@@ -154,26 +154,48 @@ module BlifUtils
 				end
 			end
 
+			if default_latch_type then
+				components.each do |c|
+					next unless c.isLatch? and c.ctrlType.nil?
+					c.set_type(default_latch_type)
+				end
+			end
+
+			if default_latch_clock then
+				components.each do |c|
+					next unless c.isLatch? and c.ctrlSig.nil?
+					c.set_clock(default_latch_clock)
+				end
+			end
+
+			if default_latch_initial_value then
+				components.each do |c|
+					next unless c.isLatch? and c.initValue.nil?
+					c.set_initial_value(default_latch_initial_value)
+				end
+			end
+
+
 			# Create all nets from their drivers #
+			netnames = {}
 			inputs.each do |iIO|
 				newNet = BlifUtils::Netlist::Net.new(iIO.net, :input, [], true, false)
+				netnames[newNet.name] = newNet
 				nets << newNet
 				iIO.net = newNet
 			end
 			components.reject{|comp| comp.isSubcircuit?}.each do |component|
 				newNet = BlifUtils::Netlist::Net.new(component.output, component, [], false, false)
-				if nets.collect{|net| net.name}.include?(newNet.name) then
-					abort "ERROR: In model \"#{name}\": net \"#{newNet.name}\" has more than one driver"
-				end
+				abort "ERROR: In model \"#{name}\": net \"#{newNet.name}\" has more than one driver" if netnames[newNet.name]
+				netnames[newNet.name] = newNet
 				nets << newNet
 				component.output = newNet
 			end
 			components.select{|comp| comp.isSubcircuit?}.each do |subcircuit|
 				subcircuit.outputFormalAcutalList.each do |outIO|
 					newNet = BlifUtils::Netlist::Net.new(outIO.net, subcircuit, [], false, false)
-					if nets.collect{|net| net.name}.include?(newNet.name) then
-						abort "ERROR: In model \"#{name}\": net \"#{newNet.name}\" has more than one driver"
-					end
+					abort "ERROR: In model \"#{name}\": net \"#{newNet.name}\" has more than one driver" if netnames[newNet.name]
+					netnames[newNet.name] = newNet
 					nets << newNet
 					outIO.net = newNet
 				end
@@ -181,49 +203,43 @@ module BlifUtils
 
 			# Update nets fanouts #
 			outputs.each_with_index do |oIO, i|
-				index = nets.index{|net| net.name == oIO.name}
-				if index.nil? then
-					abort "ERROR: In model \"#{name}\": output \"#{oIO.name}\" has no driver"
-				end
-				nets[index].fanouts << BlifUtils::Netlist::Fanout.new(:output, i)
-				nets[index].isOutput = true
-				oIO.net = nets[index]
+				theNet = netnames[oIO.name]
+				abort "ERROR: In model \"#{name}\": output \"#{oIO.name}\" has no driver" if theNet.nil?
+				theNet.fanouts << BlifUtils::Netlist::Fanout.new(:output, i)
+				theNet.isOutput = true
+				oIO.net = theNet
 			end
 			components.select{|comp| comp.isLatch?}.each do |latch|
-				index = nets.index{|net| net.name == latch.input}
-				if index.nil? then
-					abort "ERROR: In model \"#{name}\": input \"#{latch.input}\" from latch \"#{latch.output.name}\" has no driver"
-				end
-				nets[index].fanouts << BlifUtils::Netlist::Fanout.new(latch, 0)
-				latch.input = nets[index]
+				theNet = netnames[latch.input]
+				abort "ERROR: In model \"#{name}\": input \"#{latch.input}\" from latch \"#{latch.output.name}\" has no driver" if theNet.nil?
+				theNet.fanouts << BlifUtils::Netlist::Fanout.new(latch, 0)
+				latch.input = theNet
 			end
 			components.select{|comp| comp.isGate?}.each do |gate|
 				gate.inputs.each_with_index do |gin, i|
-					index = nets.index{|net| net.name == gin}
-					if index.nil? then
-						abort "ERROR: In model \"#{name}\": input \"#{gin}\" from gate \"#{gate.output.name}\" has no driver"
-					end
-					nets[index].fanouts << BlifUtils::Netlist::Fanout.new(gate, i)
-					gate.inputs[i] = nets[index]
+					theNet = netnames[gin]
+					abort "ERROR: In model \"#{name}\": input \"#{gin}\" from gate \"#{gate.output.name}\" has no driver" if theNet.nil?
+					theNet.fanouts << BlifUtils::Netlist::Fanout.new(gate, i)
+					gate.inputs[i] = theNet
 				end
 			end
 			components.select{|comp| comp.isSubcircuit?}.each do |subcircuit|
 				subcircuit.inputFormalAcutalList.each_with_index do |iIO, i|
-					index = nets.index{|net| net.name == iIO.net}
-					if index.nil? then
-						abort "ERROR: In model \"#{name}\": input \"#{iIO}\" (formal \"#{iIO.name}\" from reference model \"#{subcircuit.modelName}\" has no driver"
-					end
-					nets[index].fanouts << BlifUtils::Netlist::Fanout.new(subcircuit, i)
-					iIO.net = nets[index]
+					theNet = netnames[iIO.net]
+					abort "ERROR: In model \"#{name}\": input \"#{iIO}\" (formal \"#{iIO.name}\" from reference model \"#{subcircuit.modelName}\" has no driver" if theNet.nil?
+					theNet.fanouts << BlifUtils::Netlist::Fanout.new(subcircuit, i)
+					iIO.net = theNet
 				end
 			end
 
 			clocks = components.select{|comp| comp.isLatch?}.collect{|latch| latch.ctrlSig}.reject{|el| el.nil?}.uniq
 
 			# Check that each net has at least one fanout #
-			nets.each do |net|
-				if net.fanouts.empty? and not(clocks.include?(net.name)) then
-					STDERR.puts "WARNING: In model \"#{name}\": net \"#{net.name}\" has no fanouts" unless quiet
+			unless quiet then
+				nets.each do |net|
+					if net.fanouts.empty? and not(clocks.include?(net.name)) then
+						STDERR.puts "WARNING: In model \"#{name}\": net \"#{net.name}\" has no fanouts"
+					end
 				end
 			end
 
@@ -233,9 +249,9 @@ module BlifUtils
 	end # BlifUtils::Elaborator
 
 
-	def self.read(fileName, quiet: false)
+	def self.read(fileName, quiet: false, default_latch_type: nil, default_latch_clock: nil, default_latch_initial_value: nil)
 		ast = BlifUtils::Parser.parse(fileName, quiet: quiet)
-		netlist = BlifUtils::Elaborator.elaborate_netlist(ast, quiet: quiet)
+		netlist = BlifUtils::Elaborator.elaborate_netlist(ast, quiet: quiet, default_latch_type: nil, default_latch_clock: nil, default_latch_initial_value: nil)
 		return netlist
 	end # BlifUtils::read
 

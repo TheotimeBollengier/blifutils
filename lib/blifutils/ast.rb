@@ -123,7 +123,7 @@ module BlifUtils
 			class GenericLatch
 				attr_reader :input, :output, :initValue, :ctrlType, :ctrlSig
 
-				def initialize (input, output, initValue: 3, ctrlType: :re, ctrlSig: nil)
+				def initialize (input, output, initValue: nil, ctrlType: nil, ctrlSig: nil)
 					@input = input
 					@output = output
 					@initValue = initValue
@@ -135,9 +135,9 @@ module BlifUtils
 					str  = '    '*indent + "Latch:\n"
 					str += '    '*(indent+1) + "Input:  \"#{@input}\"\n"
 					str += '    '*(indent+1) + "Output: \"#{@output}\"\n"
-					str += '    '*(indent+1) + "Initial value: \"#{@initValue}\"\n"
-					str += '    '*(indent+1) + "Type: \"#{@ctrlType}\"\n"
-					str += '    '*(indent+1) + "Clock signal: #{@ctrlSig.nil? ? "nil" : "\"#{@ctrlSig}\""}\n"
+					str += '    '*(indent+1) + "Initial value: #{@initValue.nil? ? "undefined" : "\"#{@initValue}\""}\n"
+					str += '    '*(indent+1) + "Type: #{@ctrlType.nil? ? "undefined" : "\"#{@ctrlSig}\""}\n"
+					str += '    '*(indent+1) + "Clock signal: #{@ctrlSig.nil? ? "undefined" : "\"#{@ctrlSig}\""}\n"
 					return str
 				end
 			end # BlifUtils::AST::GenericLatch

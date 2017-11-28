@@ -160,7 +160,23 @@ module BlifUtils
 
 
 			def to_blif
-				return ".latch #{@input.name} #{@output.name} #{@ctrlType} #{@ctrlSig.nil? ? 'NIL' : @ctrlSig} #{@initValue}\n"
+				res  = ".latch #{@input.name} #{@output.name}"
+				if @ctrlType
+					res += " #{@ctrlType} "
+					if @ctrlSig.nil?
+						res += "NIL"
+					elsif @ctrlSig.kind_of?(BlifUtils::Netlist::Net)
+						res += @ctrlSig.name
+					else
+						res += @ctrlSig
+					end
+				end
+				if @initValue
+					res += " #{@initValue} "
+				end
+				res += "\n"
+
+				return res
 			end
 
 
@@ -178,6 +194,22 @@ module BlifUtils
 				return "Latch \"#{@output.name}\""
 			end
 
+
+			def set_type (type)
+				raise "Type must be one of [nil, :fe, :re, :ah, :al, :as]" unless [nil, :fe, :re, :ah, :al, :as].include?(type)
+				@ctrlType = type
+			end
+
+
+			def set_clock (net_or_name)
+				@ctrlSig = net_or_name
+			end
+
+
+			def set_initial_value (value)
+				raise "Initial value must be an integer in the range 0..3" unless (value.kind_of?(Integer) and value >= 0 and value <= 3)
+				@initValue = value
+			end
 		end # BlifUtils::Netlist::Latch
 
 
@@ -296,6 +328,30 @@ module BlifUtils
 
 			def is_blackbox?
 				return not(not(@isBlackBox))
+			end
+
+
+			def set_undefined_latches_type (type)
+				@components.each do |c|
+					next unless c.isLatch? and c.ctrlType.nil?
+					c.set_type(type)
+				end
+			end
+
+
+			def set_undefined_latches_clock (clk)
+				@components.each do |c|
+					next unless c.isLatch? and c.ctrlSig.nil?
+					c.set_clock(clk)
+				end
+			end
+
+
+			def set_undefined_latches_initial_value (value)
+				@components.each do |c|
+					next unless c.isLatch? and c.initValue.nil?
+					c.set_initial_value(value)
+				end
 			end
 
 

@@ -277,7 +277,7 @@ module BlifUtils
 			File.write(outFileName, File.read(File.join(File.dirname(File.expand_path(__FILE__)), '..', '..', 'share', 'blimulator_cpp_classes.cc')) + str)
 			puts "Written C++ simulation model in file \"#{outFileName}\"" unless quiet
 
-			compileLine = "g++ -c -W -Wall -O3 -std=c++11 #{outFileName} -o #{File.basename(outFileName, '.*')}.o"
+			compileLine = "g++ -c -W -Wall -O3 -std=c++11 #{outFileName} -o #{File.join(File.dirname(outFileName), File.basename(outFileName, '.*'))}.o"
 			puts "Compiling model...\n#{compileLine}" unless quiet
 			case system(compileLine)
 			when nil then
@@ -331,14 +331,14 @@ module BlifUtils
 
 			hhstr = "#ifndef #{model.name.upcase}_SIMULATION_HEADER_H\n#define #{model.name.upcase}_SIMULATION_HEADER_H\n\n"
 			if cpp_out_file_name then
-				outHeadername = File.basename(cpp_out_file_name, '.*') + '.hh'
+				outHeadername = File.join(File.dirname(cpp_out_file_name), File.basename(cpp_out_file_name, '.*') + '.hh')
 			else
 				outHeadername = model.name + '_cpp_header.hh'
 			end
 			File.write(outHeadername, hhstr + File.read(File.join(File.dirname(File.expand_path(__FILE__)), '..', '..', 'share', 'blimulator_cpp_classes.hh')) + hstr)
 
 			puts "Written C++ model simulation header in file \"#{outHeadername}\"" unless quiet
-			puts "Now you can write your testbench in a C++ file as 'testbench.cc' including '#include \"#{outHeadername}\"', then run:" unless quiet
+			puts "Now you can write your testbench in a C++ file as 'testbench.cc' including '#include \"#{File.basename(outHeadername)}\"', then run:" unless quiet
 			puts "g++ -W -Wall -O3 #{File.basename(outFileName, '.*')}.o testbench.cc" unless quiet
 		end
 

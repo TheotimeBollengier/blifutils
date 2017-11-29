@@ -362,15 +362,19 @@ this gem also include the `blifutils` executable script, which uses command line
 ```lang-none
 $ blifutils --help
 Usage: blifutils [options] -i file1 file2 ...
-    -i, --input FILES                Input blif files
-    -o, --output [FILE]              Output blif to FILE
-    -s, --simulation                 Create C++ simulation files
-    -v, --vhdl                       Create a vhdl file
-    -f, --flatten                    Flatten the model hierarchy in a single model
-    -m, --model NAME                 Name of the model to process
+    -i, --input FILES                Input BLIF files
+    -o, --output [FILE]              Output BLIF FILE
     -p, --print-models               Print model names
+    -m, --model NAME                 Name of the model to process
+    -f, --flatten                    Flatten the model hierarchy in a single model
+    -s, --simulation [FILE]          Create C++ simulation files
+    -v, --vhdl                       Create a vhdl file
     -a, --analyze [level]            Print analysis, with optional level analysis (level)
     -A, --analyze_with_graphviz      Print analysis, with level analysis, wirting graphvis files
+        --default-latch-type TYPE    Set undefined latch types to TYPE (re: rising edge, fe: falling edge, al: active low, ah: active high, as: asynchronous)
+        --default-latch-clock NAME   Set undefined latch contol signals to NAME
+        --default-latch-initial-value VALUE
+                                     Set undefined latch initial value to VALUE (0, 1, 2: don't care, 3: undefine)
     -q, --quiet                      Don't print messages
     -h, --help                       Display this help
 ```

@@ -52,7 +52,7 @@ module BlifUtils
 		end # BlifUtils::Netlist::LogicGate
 
 
-		def create_simulation_file_for_model (modelName = nil, quiet: false)
+		def create_simulation_file_for_model (modelName = nil, quiet: false, cpp_out_file_name: nil)
 			modelName = first_model.name if modelName.nil?
 			dedel = get_model_by_name(modelName)
 			if dedel.nil?
@@ -269,12 +269,15 @@ module BlifUtils
 			end
 			str += "}\n\n"
 
-
-			outFileName = model.name + '_cpp_sim.cc'
+			if cpp_out_file_name then
+				outFileName = cpp_out_file_name.to_s
+			else
+				outFileName = model.name + '_cpp_sim.cc'
+			end
 			File.write(outFileName, File.read(File.join(File.dirname(File.expand_path(__FILE__)), '..', '..', 'share', 'blimulator_cpp_classes.cc')) + str)
 			puts "Written C++ simulation model in file \"#{outFileName}\"" unless quiet
 
-			compileLine = "g++ -c -W -Wall -O3 -std=c++11 #{outFileName} -o #{File.basename(outFileName, '.cc')}.o"
+			compileLine = "g++ -c -W -Wall -O3 -std=c++11 #{outFileName} -o #{File.basename(outFileName, '.*')}.o"
 			puts "Compiling model...\n#{compileLine}" unless quiet
 			case system(compileLine)
 			when nil then
@@ -327,12 +330,16 @@ module BlifUtils
 			hstr += "};\n\n#endif /* #{model.name.upcase}_SIMULATION_HEADER_H */\n"
 
 			hhstr = "#ifndef #{model.name.upcase}_SIMULATION_HEADER_H\n#define #{model.name.upcase}_SIMULATION_HEADER_H\n\n"
-			outHeadername = model.name + '_cpp_header.hh'
+			if cpp_out_file_name then
+				outHeadername = File.basename(cpp_out_file_name, '.*') + '.hh'
+			else
+				outHeadername = model.name + '_cpp_header.hh'
+			end
 			File.write(outHeadername, hhstr + File.read(File.join(File.dirname(File.expand_path(__FILE__)), '..', '..', 'share', 'blimulator_cpp_classes.hh')) + hstr)
 
 			puts "Written C++ model simulation header in file \"#{outHeadername}\"" unless quiet
 			puts "Now you can write your testbench in a C++ file as 'testbench.cc' including '#include \"#{outHeadername}\"', then run:" unless quiet
-			puts "g++ -W -Wall -O3 #{File.basename(outFileName, '.cc')}.o testbench.cc" unless quiet
+			puts "g++ -W -Wall -O3 #{File.basename(outFileName, '.*')}.o testbench.cc" unless quiet
 		end
 
 

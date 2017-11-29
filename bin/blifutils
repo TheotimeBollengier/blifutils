@@ -58,8 +58,10 @@ optparse = OptionParser.new do |opts|
 	end
 
 	options[:simulation] = false
-	opts.on('-s', '--simulation', "Create C++ simulation files") do
+	options[:cpp_out_file_name] = nil
+	opts.on('-s', '--simulation [FILE]', "Create C++ simulation files") do |name|
 		options[:simulation] = true
+		options[:cpp_out_file_name] = name
 	end
 
 	options[:vhdl] = false
@@ -209,7 +211,7 @@ end
 
 
 if options[:simulation] then
-	netlist.create_simulation_file_for_model(options[:model], quiet: options[:quiet])
+	netlist.create_simulation_file_for_model(options[:model], quiet: options[:quiet], cpp_out_file_name: options[:cpp_out_file_name])
 end
 
 

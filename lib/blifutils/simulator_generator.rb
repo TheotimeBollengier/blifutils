@@ -64,6 +64,7 @@ module BlifUtils
 				model = flatten(modelName, false, quiet: quiet)
 			end
 
+			time_header_string = "/* This file was generated with BlifUtils (http://github.com/TheotimeBollengier/blifutils)\n * on #{Time.now.strftime '%B %-d %Y, %H:%M:%S'}\n */\n\n"
 			className = (model.name + '_simulation_class').gsub('_',' ').split.collect{|word| word.capitalize}.join
 			gateArray = model.simulation_components_to_schedule_stack(withOutputGraphviz: false, quiet: quiet) # This array does not contain constants
 			latchArray = model.components.select{|comp| comp.isLatch?}
@@ -162,7 +163,7 @@ module BlifUtils
 					str += "\t\tBitVector *OUTPUT_VECTOR_#{simVectOutput[0]};\n"
 				end
 			end
-			str += "\n\tprivate:\n\n\t\tvoid setConstants();\n"
+			str += "\n\tprivate:\n\n\t\tvoid set_constants();\n"
 			str += "};\n\n"
 
 			str += "#{className}::#{className}() :\n"
@@ -218,10 +219,10 @@ module BlifUtils
 				end
 			end
 			str += "\n"
-			str += "\tModel::setNets(nets);\n"
-			str += "\tModel::setLatches(latches);\n"
-			str += "\tModel::setGates(gates);\n"
-			str += "\tModel::setChanges(gateChanged);\n"
+			str += "\tModel::set_nets(nets);\n"
+			str += "\tModel::set_latches(latches);\n"
+			str += "\tModel::set_gates(gates);\n"
+			str += "\tModel::set_changes(gateChanged);\n"
 			str += "}\n\n\n"
 
 			str += "#{className}::~#{className}()\n"
@@ -256,12 +257,12 @@ module BlifUtils
 				end
 			end
 			str += "}\n\n\n"
-			str += "void #{className}::setConstants()\n{\n"
+			str += "void #{className}::set_constants()\n{\n"
 			model.components.select{|comp| comp.isGate? and comp.is_constant?}.each do |cstGate|
 				if cstGate.singleOutputCoverList.empty? or cstGate.singleOutputCoverList[0][1] == 0 then
-					str += "\tnets[#{model.nets.index(cstGate.output)}]->setValue(0);\n"
+					str += "\tnets[#{model.nets.index(cstGate.output)}]->set_value(0);\n"
 				else
-					str += "\tnets[#{model.nets.index(cstGate.output)}]->setValue(1);\n"
+					str += "\tnets[#{model.nets.index(cstGate.output)}]->set_value(1);\n"
 				end
 				if cstGate.singleOutputCoverList.length > 1 and cstGate.singleOutputCoverList.collect{|ina_o| ina_o[1]}.uniq.length > 1 then
 					abort "ERROR: Bad constant definition in gate \"#{cstGate.output.name}\""
@@ -274,7 +275,11 @@ module BlifUtils
 			else
 				outFileName = model.name + '_cpp_sim.cc'
 			end
-			File.write(outFileName, File.read(File.join(File.dirname(File.expand_path(__FILE__)), '..', '..', 'share', 'blimulator_cpp_classes.cc')) + str)
+			File.write(outFileName,
+					   time_header_string +
+					   File.read(File.join(File.dirname(File.expand_path(__FILE__)), '..', '..', 'share', 'blimulator_cpp_classes.hh')).sub(/\/\*.*?\*\/\s*/m, '') + "\n" + 
+					   File.read(File.join(File.dirname(File.expand_path(__FILE__)), '..', '..', 'share', 'blimulator_cpp_classes.cc')).sub(/\/\*.*?\*\/\s*/m, '') + "\n" + 
+					   str)
 			puts "Written C++ simulation model in file \"#{outFileName}\"" unless quiet
 
 			compileLine = "g++ -c -W -Wall -O3 -std=c++11 #{outFileName} -o #{File.join(File.dirname(outFileName), File.basename(outFileName, '.*'))}.o"
@@ -326,7 +331,7 @@ module BlifUtils
 					hstr += "\t\tBitVector *OUTPUT_VECTOR_#{simVectOutput[0]};\n"
 				end
 			end
-			hstr += "\n\tprivate:\n\n\t\tvoid setConstants();\n"
+			hstr += "\n\tprivate:\n\n\t\tvoid set_constants();\n"
 			hstr += "};\n\n#endif /* #{model.name.upcase}_SIMULATION_HEADER_H */\n"
 
 			hhstr = "#ifndef #{model.name.upcase}_SIMULATION_HEADER_H\n#define #{model.name.upcase}_SIMULATION_HEADER_H\n\n"
@@ -335,7 +340,7 @@ module BlifUtils
 			else
 				outHeadername = model.name + '_cpp_header.hh'
 			end
-			File.write(outHeadername, hhstr + File.read(File.join(File.dirname(File.expand_path(__FILE__)), '..', '..', 'share', 'blimulator_cpp_classes.hh')) + hstr)
+			File.write(outHeadername, time_header_string + hhstr + File.read(File.join(File.dirname(File.expand_path(__FILE__)), '..', '..', 'share', 'blimulator_cpp_classes.hh')).sub(/\/\*.*?\*\/\s*/m, '') + "\n" + hstr)
 
 			puts "Written C++ model simulation header in file \"#{outHeadername}\"" unless quiet
 			puts "Now you can write your testbench in a C++ file as 'testbench.cc' including '#include \"#{File.basename(outHeadername)}\"', then run:" unless quiet

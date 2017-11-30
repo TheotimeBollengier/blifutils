@@ -19,122 +19,6 @@
  */
 
 
-#include <inttypes.h>
-#include <iostream>
-#include <cstdlib>
-
-
-class Net
-{
-	private:
-
-		int   value;    // 0, 1 or 2 for unknown
-		int   nbFanoutComponentIndex;
-		int  *fanoutComponentIndex;
-		bool *gateChanged;
-
-	public:
-
-		Net(int *fanoutIndexes, int fanoutIndexesLength, bool *gateChangedArray);
-		~Net();
-
-		int  getValue();
-		void setValue(int val);
-};
-
-
-class BitVector
-{
-	/* For now we are doing with uint64_t, will see later for more than 64 bits */
-
-	private:
-
-		int   width;
-		Net **nets;
-
-	public:
-
-		BitVector(Net **netArray, int bitwidth);
-		~BitVector();
-
-		void setValue(int64_t val);
-		void setValue(uint64_t val);
-
-		uint64_t getValue(bool *valid);
-		int64_t  getValueSigned(bool *valid);
-
-		int  bitWidth();
-};
-
-
-class Latch
-{
-	private:
-
-		Net *input;
-		Net *output;
-		int initValue;
-		
-	public:
-
-		Latch(Net *inputNet, Net *outputNet, int initVal);
-
-		void reset();
-		void clock();
-};
-
-
-class Gate
-{
-	private:
-
-		int       nbInputs;
-		Net      **inputs;
-		Net      *output;
-		uint32_t *singleOutputCover;
-
-	public:
-
-		Gate(Net **inputNets, int nbinputs, Net *outputNet, uint32_t *singleoutputcover);
-		~Gate();
-
-		void propagate();
-};
-
-
-class Model
-{
-	private:
-
-		unsigned int nbNets;
-		unsigned int nbLatches;
-		unsigned int nbGates;
-
-		Net   **nets;
-		Latch **latches;
-		Gate  **gates;
-		bool   *changed;
-
-	public:
-
-		Model(unsigned int nbNet, unsigned int nbLatche, unsigned int nbGate);
-		virtual ~Model();
-
-		void propagate(); 
-		void clock(); 
-		void cycle();
-		void reset();
-
-	protected:
-
-		virtual void setConstants() = 0;
-		void setNets(Net **netArr);
-		void setLatches(Latch **latchArr);
-		void setGates(Gate **gateArr);
-		void setChanges(bool *changeArr);
-};
-
-
 /******************************************************************************/
 
 
@@ -155,13 +39,13 @@ Net::~Net()
 }
 
 
-int Net::getValue()
+int Net::get_value()
 {
 	return value;
 }
 
 
-void Net::setValue(int val)
+void Net::set_value(int val)
 {
 	if (val != value) {
 		for (int i(0); i < nbFanoutComponentIndex; i++) {
@@ -194,37 +78,37 @@ BitVector::~BitVector()
 }
 
 
-void BitVector::setValue(uint64_t val)
+void BitVector::set_value(uint64_t val)
 {
 	uint64_t mask;
 
 	for (int i(0); i < width; i++) {
 		mask = (uint64_t)1ULL << i;
 		if ((val & mask) == 0) {
-			nets[i]->setValue(0);
+			nets[i]->set_value(0);
 		} else {
-			nets[i]->setValue(1);
+			nets[i]->set_value(1);
 		}
 	}
 }
 
 
-void BitVector::setValue(int64_t val)
+void BitVector::set_value(int64_t val)
 {
 	uint64_t mask;
 
 	for (int i(0); i < width; i++) {
 		mask = (uint64_t)1ULL << i;
 		if ((val & mask) == 0) {
-			nets[i]->setValue(0);
+			nets[i]->set_value(0);
 		} else {
-			nets[i]->setValue(1);
+			nets[i]->set_value(1);
 		}
 	}
 }
 
 
-uint64_t BitVector::getValue(bool *valid)
+uint64_t BitVector::get_value(bool *valid)
 {
 	uint64_t res(0);
 	int netVal;
@@ -234,7 +118,7 @@ uint64_t BitVector::getValue(bool *valid)
 	}
 
 	for (int i(0); i < width; i++) {
-		netVal = nets[i]->getValue();
+		netVal = nets[i]->get_value();
 		if (netVal == 2) {
 			if (valid != NULL) {
 				*valid = false;
@@ -248,7 +132,7 @@ uint64_t BitVector::getValue(bool *valid)
 }
 
 
-int64_t BitVector::getValueSigned(bool *valid)
+int64_t BitVector::get_value_signed(bool *valid)
 {
 	int64_t res(0);
 	unsigned int netVal;
@@ -259,7 +143,7 @@ int64_t BitVector::getValueSigned(bool *valid)
 	}
 
 	for (i = 0; i < width; i++) {
-		netVal = nets[i]->getValue();
+		netVal = nets[i]->get_value();
 		if (netVal == 2) {
 			if (valid != NULL) {
 				*valid = false;
@@ -268,7 +152,7 @@ int64_t BitVector::getValueSigned(bool *valid)
 		}
 		res |= ((uint64_t)netVal << (uint64_t)i);
 	}
-	if (nets[width-1]->getValue() == 1) {
+	if (nets[width-1]->get_value() == 1) {
 		for (i = width; i < 64; i++) {
 			res |= (1UL << (uint64_t)i);
 		}
@@ -279,7 +163,7 @@ int64_t BitVector::getValueSigned(bool *valid)
 }
 
 
-int  BitVector::bitWidth()
+int  BitVector::bit_width()
 {
 	return width;
 }
@@ -301,13 +185,13 @@ Latch::Latch(Net *inputNet, Net *outputNet, int initVal) :
 
 void Latch::reset()
 {
-	output->setValue(initValue);
+	output->set_value(initValue);
 }
 
 
 void Latch::clock()
 {
-	output->setValue(input->getValue());
+	output->set_value(input->get_value());
 }
 
 
@@ -343,9 +227,9 @@ void Gate::propagate()
 	int val;
 
 	for (int i(0); i < nbInputs; i++) {
-		val = inputs[i]->getValue();
+		val = inputs[i]->get_value();
 		if (val == 2) {
-			output->setValue(2);
+			output->set_value(2);
 			return;
 		}
 		addr |= (val << i);
@@ -354,7 +238,7 @@ void Gate::propagate()
 	shift = addr & 0x1f;
 	index = addr >> 5;
 
-	output->setValue((singleOutputCover[index] >> shift) & 1);
+	output->set_value((singleOutputCover[index] >> shift) & 1);
 }
 
 
@@ -410,36 +294,36 @@ void Model::reset()
 	unsigned int i;
 
 	for (i = 0; i < nbNets; i++) {
-		nets[i]->setValue(2);
+		nets[i]->set_value(2);
 	}
 
 	for (i = 0; i < nbLatches; i++) {
 		latches[i]->reset();
 	}
 
-	setConstants();
+	set_constants();
 }
 
 
-void Model::setNets(Net **netArr)
+void Model::set_nets(Net **netArr)
 {
 	nets = netArr;
 }
 
 
-void Model::setLatches(Latch **latchArr)
+void Model::set_latches(Latch **latchArr)
 {
 	latches = latchArr;
 }
 
 
-void Model::setGates(Gate **gateArr)
+void Model::set_gates(Gate **gateArr)
 {
 	gates = gateArr;
 }
 
 
-void Model::setChanges(bool *changeArr)
+void Model::set_changes(bool *changeArr)
 {
 	changed = changeArr;
 }

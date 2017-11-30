@@ -26,111 +26,113 @@
 
 class Net
 {
-	private:
+private:
 
-		int   value;    // 0, 1 or 2 for unknown
-		int   nbFanoutComponentIndex;
-		int  *fanoutComponentIndex;
-		bool *gateChanged;
+	int   value; // 0, 1 or 2 for unknown
+	int   nbFanoutComponentIndex;
+	int  *fanoutComponentIndex;
+	bool *gateChanged;
 
-	public:
+public:
 
-		Net(int *fanoutIndexes, int fanoutIndexesLength, bool *gateChangedArray);
-		~Net();
+	Net(int *fanoutIndexes, int fanoutIndexesLength, bool *gateChangedArray);
+	~Net();
 
-		int  getValue();
-		void setValue(int val);
+	int  get_value();
+	void set_value(int val);
 };
 
 
 class BitVector
 {
-	/* For now we are doing with uint64_t, will see later for more than 64 bits */
+	/* For now we are doing with uint64_t to set BitVector values, 
+	 * will see later for more than 64 bits.
+	 */
 
-	private:
+private:
 
-		int   width;
-		Net **nets;
+	int   width;
+	Net **nets;
 
-	public:
+public:
 
-		BitVector(Net **netArray, int bitwidth);
-		~BitVector();
+	BitVector(Net **netArray, int bitwidth);
+	~BitVector();
 
-		void setValue(int64_t val);
-		void setValue(uint64_t val);
+	void set_value(int64_t val);
+	void set_value(uint64_t val);
 
-		uint64_t getValue(bool *valid);
-		int64_t  getValueSigned(bool *valid);
+	uint64_t get_value(bool *valid = NULL);
+	int64_t  get_value_signed(bool *valid = NULL);
 
-		int  bitWidth();
+	int  bit_width();
 };
 
 
 class Latch
 {
-	private:
+private:
 
-		Net *input;
-		Net *output;
-		int initValue;
-		
-	public:
+	Net *input;
+	Net *output;
+	int initValue;
+	
+public:
 
-		Latch(Net *inputNet, Net *outputNet, int initVal);
+	Latch(Net *inputNet, Net *outputNet, int initVal);
 
-		void reset();
-		void clock();
+	void reset();
+	void clock();
 };
 
 
 class Gate
 {
-	private:
+private:
 
-		int       nbInputs;
-		Net      **inputs;
-		Net      *output;
-		uint32_t *singleOutputCover;
+	int        nbInputs;
+	Net      **inputs;
+	Net       *output;
+	uint32_t  *singleOutputCover;
 
-	public:
+public:
 
-		Gate(Net **inputNets, int nbinputs, Net *outputNet, uint32_t *singleoutputcover);
-		~Gate();
+	Gate(Net **inputNets, int nbinputs, Net *outputNet, uint32_t *singleoutputcover);
+	~Gate();
 
-		void propagate();
+	void propagate();
 };
 
 
 class Model
 {
-	private:
+private:
 
-		unsigned int nbNets;
-		unsigned int nbLatches;
-		unsigned int nbGates;
+	unsigned int nbNets;
+	unsigned int nbLatches;
+	unsigned int nbGates;
 
-		Net   **nets;
-		Latch **latches;
-		Gate  **gates;
-		bool   *changed;
+	Net   **nets;
+	Latch **latches;
+	Gate  **gates;
+	bool   *changed;
 
-	public:
+public:
 
-		Model(unsigned int nbNet, unsigned int nbLatche, unsigned int nbGate);
-		virtual ~Model();
+	Model(unsigned int nbNet, unsigned int nbLatche, unsigned int nbGate);
+	virtual ~Model();
 
-		void propagate(); 
-		void clock(); 
-		void cycle();
-		void reset();
+	void propagate(); 
+	void clock(); 
+	void cycle();
+	void reset();
 
-	protected:
+protected:
 
-		virtual void setConstants() = 0;
-		void setNets(Net **netArr);
-		void setLatches(Latch **latchArr);
-		void setGates(Gate **gateArr);
-		void setChanges(bool *changeArr);
+	virtual void set_constants() = 0;
+	void         set_nets(Net **netArr);
+	void         set_latches(Latch **latchArr);
+	void         set_gates(Gate **gateArr);
+	void         set_changes(bool *changeArr);
 };
 

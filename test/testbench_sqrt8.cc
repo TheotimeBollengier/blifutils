@@ -13,18 +13,18 @@ int main(void)
 	for (in = 0; in < 256; in++) {
 		iterations++;
 
-		dut->INPUT_VECTOR_radicand->setValue(in);
-		dut->INPUT_NET_go->setValue(1);
+		dut->INPUT_VECTOR_radicand->set_value(in);
+		dut->INPUT_NET_go->set_value(1);
 		dut->cycle();
-		dut->INPUT_NET_go->setValue(0);
+		dut->INPUT_NET_go->set_value(0);
 		dut->cycle();
 
-		while (dut->OUTPUT_NET_done->getValue() != 1) {
+		while (dut->OUTPUT_NET_done->get_value() != 1) {
 			dut->clock();
 			dut->propagate();
 		}
 
-		out = dut->OUTPUT_VECTOR_squareRoot->getValue(NULL);
+		out = dut->OUTPUT_VECTOR_squareRoot->get_value();
 		golden = (int)sqrt(in);
 		if (out != golden) {
 			std::cerr << "sqrt(" << in << ") => " << out << " (should be " << golden << ")" << std::endl;

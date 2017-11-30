@@ -71,29 +71,29 @@ int main(int argc, char *argv[])
 	startTime = clock();
 
 	dut->reset();
-	dut->INPUT_VECTOR_DAT_I->setValue(0UL);
-	dut->INPUT_VECTOR_ACK_I->setValue(0UL);
+	dut->INPUT_VECTOR_DAT_I->set_value(0UL);
+	dut->INPUT_VECTOR_ACK_I->set_value(0UL);
 	dut->propagate();
 
 	/* Simulate a wishbone bus */
-	while (dut->OUTPUT_NET_BREAKPOINT->getValue() != 1) {
-		if (dut->OUTPUT_NET_CYC_O->getValue() == 1) {
-			addr = dut->OUTPUT_VECTOR_ADR_O->getValue(&valid);
+	while (dut->OUTPUT_NET_BREAKPOINT->get_value() != 1) {
+		if (dut->OUTPUT_NET_CYC_O->get_value() == 1) {
+			addr = dut->OUTPUT_VECTOR_ADR_O->get_value(&valid);
 			if (valid != true) {
 				std::cerr << "\033[1;31mADR_O not valid (" << cclock << ")\033[0m" << std::endl;
 				exit(EXIT_FAILURE);
 			}
-			if (dut->OUTPUT_NET_WE_O->getValue() == 1) {
+			if (dut->OUTPUT_NET_WE_O->get_value() == 1) {
 				if (addr >= (sizeof(mem) / 4)) {
 					//printf("\naddr: 0x%x ", addr);
-					uint64_t car = dut->OUTPUT_VECTOR_DAT_O->getValue(&valid);
+					uint64_t car = dut->OUTPUT_VECTOR_DAT_O->get_value(&valid);
 					if (valid != true) {
 						std::cerr << "\033[1;31mDAT_O not valid (" << cclock << ")\033[0m" << std::endl;
 						exit(EXIT_FAILURE);
 					}
 					write(1, &car, 1);
 				} else {
-					mem[addr] = (uint32_t)dut->OUTPUT_VECTOR_DAT_O->getValue(&valid);
+					mem[addr] = (uint32_t)dut->OUTPUT_VECTOR_DAT_O->get_value(&valid);
 					if (valid != true) {
 						std::cerr << "\033[1;31mDAT_O not valid (" << cclock << ")\033[0m" << std::endl;
 						exit(EXIT_FAILURE);
@@ -101,14 +101,14 @@ int main(int argc, char *argv[])
 				}
 				//printf("Write 0x%08x @ 0x%08x\n", mem[addr], addr << 2);
 			} else {
-				dut->INPUT_VECTOR_DAT_I->setValue((uint64_t)mem[addr]);
+				dut->INPUT_VECTOR_DAT_I->set_value((uint64_t)mem[addr]);
 				//printf("Read  0x%08x @ 0x%08x\n", mem[addr], addr << 2);
 			}
-			dut->INPUT_NET_ACK_I->setValue(1);
+			dut->INPUT_NET_ACK_I->set_value(1);
 			dut->propagate();
 			dut->clock();
 			cclock++;
-			dut->INPUT_NET_ACK_I->setValue(0);
+			dut->INPUT_NET_ACK_I->set_value(0);
 			dut->propagate();
 		} else {
 			dut->clock();
